@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
+import { Link, useLocation } from 'react-router-dom';
 
 const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
-  const [activeLink, setActiveLink] = useState('home');
   const [cartItems] = useState(3);
   const [isScrolled, setIsScrolled] = useState(false);
+  const location = useLocation();
 
   useEffect(() => {
     const handleScroll = () => {
@@ -15,10 +16,10 @@ const Navbar = () => {
   }, []);
 
   const navItems = [
-    { id: 'home', label: 'Home' },
-    { id: 'products', label: 'Products' },
-    { id: 'about', label: 'About Us' },
-    { id: 'contact', label: 'Contact Us' },
+    { id: 'home', path: '/', label: 'Home' },
+    { id: 'products', path: '/products', label: 'Products' },
+    { id: 'about', path: '/about', label: 'About Us' },
+    { id: 'contact', path: '/contact', label: 'Contact Us' },
   ];
 
   const ShoppingCartIcon = () => (
@@ -27,12 +28,14 @@ const Navbar = () => {
     </svg>
   );
 
-  const handleCartClick = () => {
-    console.log('Navigating to cart page');
+  const isActiveLink = (path) => {
+    if (path === '/') {
+      return location.pathname === '/';
+    }
+    return location.pathname.startsWith(path);
   };
 
-  const handleNavClick = (itemId) => {
-    setActiveLink(itemId);
+  const handleNavClick = () => {
     if (isOpen) setIsOpen(false);
   };
 
@@ -45,7 +48,7 @@ const Navbar = () => {
       <div className="max-w-7xl mx-auto px-6 sm:px-8 lg:px-12">
         <div className="flex justify-between items-center h-20">
           {/* Logo */}
-          <div className="flex items-center">
+          <Link to="/" className="flex items-center" onClick={handleNavClick}>
             <div className="flex-shrink-0 flex items-center">
               <img 
                 src="src/assets/logo.png" 
@@ -62,22 +65,19 @@ const Navbar = () => {
                 isScrolled ? 'text-gray-300' : 'text-orange-100'
               }`}>PREMIUM LIGHTERS</div>
             </div>
-          </div>
+          </Link>
 
-          {/* Desktop Navigation - Simple Line Hover */}
+          {/* Desktop Navigation */}
           <div className="hidden lg:flex items-center space-x-8">
             {navItems.map((item) => (
-              <a
+              <Link
                 key={item.id}
-                href={`#${item.id}`}
-                onClick={(e) => {
-                  e.preventDefault();
-                  handleNavClick(item.id);
-                }}
+                to={item.path}
+                onClick={handleNavClick}
                 className={`relative py-2 px-4 font-medium transition-all duration-300 group ${
                   isScrolled ? 'text-gray-300' : 'text-white'
                 } ${
-                  activeLink === item.id
+                  isActiveLink(item.path)
                     ? isScrolled 
                       ? 'text-orange-400'
                       : 'text-white'
@@ -91,22 +91,23 @@ const Navbar = () => {
                 
                 {/* Simple Line Animation */}
                 <div className={`absolute bottom-0 left-0 w-full h-0.5 bg-gradient-to-r from-orange-400 to-yellow-400 transform origin-left scale-x-0 transition-transform duration-300 ${
-                  activeLink === item.id ? 'scale-x-100' : 'group-hover:scale-x-100'
+                  isActiveLink(item.path) ? 'scale-x-100' : 'group-hover:scale-x-100'
                 }`}></div>
                 
                 {/* Subtle Background Glow on Hover */}
                 <div className={`absolute inset-0 bg-gradient-to-r from-orange-500/0 to-yellow-400/0 rounded-lg transition-all duration-300 ${
-                  activeLink === item.id 
+                  isActiveLink(item.path) 
                     ? 'from-orange-500/5 to-yellow-400/5' 
                     : 'group-hover:from-orange-500/5 group-hover:to-yellow-400/5'
                 }`}></div>
-              </a>
+              </Link>
             ))}
             
             {/* Cart Button */}
             <div className="relative pl-8 ml-8 border-l border-gray-600/50">
-              <button
-                onClick={handleCartClick}
+              <Link
+                to="/cart"
+                onClick={handleNavClick}
                 className={`flex items-center space-x-2 py-2 px-4 transition-all duration-300 rounded-lg group relative ${
                   isScrolled 
                     ? 'text-gray-300 hover:text-white' 
@@ -119,7 +120,7 @@ const Navbar = () => {
                 {/* Cart Text */}
                 <span className="font-medium text-sm">Cart</span>
                 
-                {/* Cart Count - Simple Badge */}
+                {/* Cart Count */}
                 {cartItems > 0 && (
                   <span className={`absolute -top-2 -right-2 text-xs px-1.5 py-0.5 rounded font-medium ${
                     isScrolled 
@@ -131,8 +132,10 @@ const Navbar = () => {
                 )}
                 
                 {/* Line Animation for Cart */}
-                <div className={`absolute bottom-0 left-0 w-full h-0.5 bg-gradient-to-r from-orange-400 to-yellow-400 transform origin-left scale-x-0 transition-transform duration-300 group-hover:scale-x-100`}></div>
-              </button>
+                <div className={`absolute bottom-0 left-0 w-full h-0.5 bg-gradient-to-r from-orange-400 to-yellow-400 transform origin-left scale-x-0 transition-transform duration-300 ${
+                  isActiveLink('/cart') ? 'scale-x-100' : 'group-hover:scale-x-100'
+                }`}></div>
+              </Link>
             </div>
           </div>
 
@@ -140,8 +143,9 @@ const Navbar = () => {
           <div className="lg:hidden flex items-center space-x-4">
             {/* Mobile Cart */}
             <div className="relative">
-              <button 
-                onClick={handleCartClick}
+              <Link 
+                to="/cart"
+                onClick={handleNavClick}
                 className={`flex items-center space-x-2 py-2 px-3 transition-all duration-300 ${
                   isScrolled 
                     ? 'text-gray-300 hover:text-white' 
@@ -159,7 +163,7 @@ const Navbar = () => {
                     {cartItems}
                   </span>
                 )}
-              </button>
+              </Link>
             </div>
 
             {/* Hamburger Menu */}
@@ -197,15 +201,12 @@ const Navbar = () => {
                 : 'bg-orange-500/95 border-orange-300 shadow-lg'
             }`}>
               {navItems.map((item) => (
-                <a
+                <Link
                   key={item.id}
-                  href={`#${item.id}`}
-                  onClick={(e) => {
-                    e.preventDefault();
-                    handleNavClick(item.id);
-                  }}
+                  to={item.path}
+                  onClick={handleNavClick}
                   className={`flex items-center justify-between px-4 py-4 rounded-xl text-base font-medium transition-all duration-300 group ${
-                    activeLink === item.id
+                    isActiveLink(item.path)
                       ? isScrolled
                         ? 'text-orange-400'
                         : 'text-white'
@@ -217,7 +218,7 @@ const Navbar = () => {
                   <span className="tracking-wide">{item.label}</span>
                   <svg 
                     className={`w-4 h-4 transform transition-transform duration-300 ${
-                      activeLink === item.id ? 'rotate-90 text-orange-400' : 'group-hover:translate-x-1'
+                      isActiveLink(item.path) ? 'rotate-90 text-orange-400' : 'group-hover:translate-x-1'
                     }`} 
                     fill="none" 
                     stroke="currentColor" 
@@ -225,15 +226,13 @@ const Navbar = () => {
                   >
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                   </svg>
-                </a>
+                </Link>
               ))}
               
               {/* Mobile Cart Item */}
-              <button
-                onClick={() => {
-                  handleCartClick();
-                  setIsOpen(false);
-                }}
+              <Link
+                to="/cart"
+                onClick={handleNavClick}
                 className={`flex items-center justify-between w-full px-4 py-4 rounded-xl text-base font-medium transition-all duration-300 group ${
                   isScrolled
                     ? 'text-gray-300 hover:text-orange-400'
@@ -250,7 +249,7 @@ const Navbar = () => {
                     {cartItems}
                   </span>
                 )}
-              </button>
+              </Link>
             </div>
           </div>
         )}
