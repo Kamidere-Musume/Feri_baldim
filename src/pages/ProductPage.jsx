@@ -1,7 +1,15 @@
 import React, { useState, useEffect } from 'react'
-import { Link } from 'react-router-dom'
+import { useNavigate, useSearchParams, useLocation } from 'react-router-dom'
 
 function ProductPage() {
+  const navigate = useNavigate()
+  const [searchParams, setSearchParams] = useSearchParams()
+  const location = useLocation()
+  
+  // Get current page from URL or default to 1
+  const urlPage = parseInt(searchParams.get('page')) || 1
+  const [currentPage, setCurrentPage] = useState(urlPage)
+  
   const [products, setProducts] = useState([])
   const [filteredProducts, setFilteredProducts] = useState([])
   const [activeFilters, setActiveFilters] = useState(['all'])
@@ -10,9 +18,24 @@ function ProductPage() {
   const [searchTerm, setSearchTerm] = useState('')
   const [sortBy, setSortBy] = useState('name')
   const [activeTags, setActiveTags] = useState([])
-  const [currentPage, setCurrentPage] = useState(1)
-  const [productsPerPage] = useState(12) // Increased from 6 to 12
+  const [productsPerPage] = useState(12)
   const [showFilterPanel, setShowFilterPanel] = useState(false)
+  const [quickPreviewProduct, setQuickPreviewProduct] = useState(null)
+
+  // Scroll to top when page changes (including back/forward navigation)
+  useEffect(() => {
+    window.scrollTo(0, 0)
+  }, [location.pathname, location.search])
+
+  // Sync URL with current page
+  useEffect(() => {
+    setSearchParams({ page: currentPage.toString() })
+  }, [currentPage, setSearchParams])
+
+  // Handle back/forward navigation
+  useEffect(() => {
+    setCurrentPage(urlPage)
+  }, [urlPage])
 
   // Enhanced filters with icons
   const filters = [
@@ -46,11 +69,17 @@ function ProductPage() {
 
     const materials = ['Stainless Steel', 'Brass', 'Titanium', 'Copper', 'Aluminum']
     const colors = ['#ef4444', '#3b82f6', '#10b981', '#f59e0b', '#8b5cf6']
+    const features = [
+      'Wind-resistant flame', 'Adjustable flame height', 'Butane fuel', 'USB rechargeable',
+      'Waterproof casing', 'Safety lock', 'Child safety', 'Lifetime warranty',
+      'Fuel gauge', 'Flame visibility', 'Ergonomic design', 'Piezo ignition'
+    ]
 
     return Array.from({ length: 36 }, (_, i) => {
       const type = productTypes[Math.floor(Math.random() * productTypes.length)]
       const price = Math.floor(Math.random() * 200) + 50
       const originalPrice = Math.random() > 0.7 ? price + Math.floor(Math.random() * 100) : price
+      const productFeatures = [...features].sort(() => 0.5 - Math.random()).slice(0, 3)
       
       return {
         id: i + 1,
@@ -66,7 +95,10 @@ function ProductPage() {
         stock: Math.floor(Math.random() * 50),
         material: materials[Math.floor(Math.random() * materials.length)],
         colors: colors.slice(0, Math.floor(Math.random() * 3) + 2),
-        tags: availableTags.slice(0, Math.floor(Math.random() * 4) + 1).map(tag => tag.id)
+        tags: availableTags.slice(0, Math.floor(Math.random() * 4) + 1).map(tag => tag.id),
+        features: productFeatures,
+        dimensions: `${(Math.random() * 3 + 8).toFixed(1)} x ${(Math.random() * 2 + 2).toFixed(1)} x ${(Math.random() * 1 + 1).toFixed(1)} cm`,
+        weight: `${(Math.random() * 50 + 30).toFixed(0)}g`
       }
     })
   }
@@ -124,7 +156,7 @@ function ProductPage() {
     }
 
     setFilteredProducts(result)
-    setCurrentPage(1)
+    setCurrentPage(1) // Reset to page 1 when filters change
   }, [products, activeFilters, activeTags, searchTerm, sortBy])
 
   // Update filter counts
@@ -174,9 +206,17 @@ function ProductPage() {
   }
 
   const handleViewProduct = (product) => {
-    setSelectedProduct(product)
-    // You can implement product detail view modal here
-    console.log('View product:', product)
+    navigate(`/product/${product.id}`, { 
+      state: { fromPage: currentPage } 
+    })
+  }
+
+  const handleQuickPreview = (product) => {
+    setQuickPreviewProduct(product)
+  }
+
+  const closeQuickPreview = () => {
+    setQuickPreviewProduct(null)
   }
 
   const clearAllFilters = () => {
@@ -191,9 +231,23 @@ function ProductPage() {
   const currentProducts = filteredProducts.slice(indexOfFirstProduct, indexOfLastProduct)
   const totalPages = Math.ceil(filteredProducts.length / productsPerPage)
 
-  const paginate = (pageNumber) => setCurrentPage(pageNumber)
-  const nextPage = () => setCurrentPage(prev => Math.min(prev + 1, totalPages))
-  const prevPage = () => setCurrentPage(prev => Math.max(prev - 1, 1))
+  // Updated pagination functions with scroll to top
+  const paginate = (pageNumber) => {
+    setCurrentPage(pageNumber)
+    window.scrollTo(0, 0)
+  }
+
+  const nextPage = () => {
+    const next = Math.min(currentPage + 1, totalPages)
+    setCurrentPage(next)
+    window.scrollTo(0, 0)
+  }
+
+  const prevPage = () => {
+    const prev = Math.max(currentPage - 1, 1)
+    setCurrentPage(prev)
+    window.scrollTo(0, 0)
+  }
 
   // Utility functions
   const formatPrice = (price) => {
@@ -217,6 +271,132 @@ function ProductPage() {
     </div>
   )
 
+  // Quick Preview Component
+  const QuickPreview = ({ product, onClose }) => {
+    if (!product) return null
+
+    return (
+      <div 
+        className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4"
+        onClick={onClose}
+      >
+        <div 
+          className="bg-gradient-to-br from-gray-800 to-gray-900 rounded-3xl border border-amber-500/30 shadow-2xl max-w-2xl w-full mx-auto max-h-[90vh] overflow-y-auto"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className="p-6">
+            {/* Header */}
+            <div className="flex justify-between items-start mb-4">
+              <h3 className="text-2xl font-bold text-white">{product.name}</h3>
+              <button
+                onClick={onClose}
+                className="text-gray-400 hover:text-white transition-colors cursor-pointer p-2 rounded-lg hover:bg-gray-700"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            {/* Product Image */}
+            <div className={`h-48 rounded-2xl mb-4 ${product.gradient} relative overflow-hidden`}>
+              <div className="absolute inset-0 flex items-center justify-center">
+                <span className="text-white text-lg font-semibold bg-black/30 px-4 py-2 rounded-full backdrop-blur-sm">
+                  {product.badge} Lighter
+                </span>
+              </div>
+            </div>
+
+            {/* Description */}
+            <p className="text-gray-300 mb-4 leading-relaxed">
+              {product.description}
+            </p>
+
+            {/* Quick Details */}
+            <div className="grid grid-cols-2 gap-4 mb-4">
+              <div className="bg-gray-700/50 rounded-xl p-3">
+                <div className="text-amber-400 text-sm font-semibold">Price</div>
+                <div className="text-white font-bold text-lg">{formatPrice(product.price)}</div>
+                {product.originalPrice > product.price && (
+                  <div className="text-gray-400 text-sm line-through">{formatPrice(product.originalPrice)}</div>
+                )}
+              </div>
+              
+              <div className="bg-gray-700/50 rounded-xl p-3">
+                <div className="text-amber-400 text-sm font-semibold">Rating</div>
+                <div className="text-white font-bold text-lg flex items-center">
+                  <span className="text-amber-400 mr-1">★</span>
+                  {product.rating} ({product.reviews} reviews)
+                </div>
+              </div>
+            </div>
+
+            {/* Features */}
+            <div className="mb-4">
+              <h4 className="text-amber-400 font-semibold mb-2">Key Features</h4>
+              <ul className="space-y-1">
+                {product.features.map((feature, index) => (
+                  <li key={index} className="text-gray-300 text-sm flex items-center">
+                    <span className="text-green-400 mr-2">✓</span>
+                    {feature}
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            {/* Specifications */}
+            <div className="grid grid-cols-2 gap-4 text-sm mb-4">
+              <div>
+                <span className="text-gray-400">Material:</span>
+                <span className="text-white ml-2">{product.material}</span>
+              </div>
+              <div>
+                <span className="text-gray-400">Dimensions:</span>
+                <span className="text-white ml-2">{product.dimensions}</span>
+              </div>
+              <div>
+                <span className="text-gray-400">Weight:</span>
+                <span className="text-white ml-2">{product.weight}</span>
+              </div>
+              <div>
+                <span className="text-gray-400">Stock:</span>
+                <span className={`ml-2 ${
+                  product.stock > 10 ? 'text-green-400' : 
+                  product.stock > 0 ? 'text-amber-400' : 'text-red-400'
+                }`}>
+                  {product.stock} units
+                </span>
+              </div>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex gap-3 mt-6">
+              <button 
+                onClick={() => {
+                  console.log('Added to cart:', product.id)
+                  onClose()
+                }}
+                disabled={product.stock === 0}
+                className="flex-1 bg-gradient-to-r from-red-600 to-amber-600 hover:from-red-700 hover:to-amber-700 text-white py-3 rounded-xl font-semibold transition-all duration-300 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {product.stock === 0 ? 'Out of Stock' : 'Add to Cart'}
+              </button>
+              <button 
+                onClick={() => {
+                  handleViewProduct(product)
+                  onClose()
+                }}
+                className="flex-1 border border-amber-400 text-amber-400 hover:bg-amber-400 hover:text-white py-3 rounded-xl font-semibold transition-all duration-300 cursor-pointer"
+              >
+                View Details
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   if (loading) {
     return (
       <div className="bg-gray-900 min-h-screen flex items-center justify-center">
@@ -228,6 +408,12 @@ function ProductPage() {
   return (
     <div className="bg-gray-900 min-h-screen relative overflow-hidden">
       <DynamicBackground />
+      
+      {/* Quick Preview Modal */}
+      <QuickPreview 
+        product={quickPreviewProduct} 
+        onClose={closeQuickPreview} 
+      />
 
       {/* Premium Hero Section */}
       <div className="relative overflow-hidden py-24">
@@ -520,13 +706,12 @@ function ProductPage() {
             )}
           </div>
 
-          {/* Products Grid - Updated to 4 columns on xl screens */}
+          {/* Products Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 mb-16">
             {currentProducts.map((product) => (
               <div 
                 key={product.id}
-                className="group relative bg-gradient-to-br from-gray-800 to-gray-900 rounded-2xl shadow-2xl hover:shadow-red-500/20 transition-all duration-500 transform hover:-translate-y-2 overflow-hidden border border-gray-700 flex flex-col h-full min-h-[450px] cursor-pointer"
-                onClick={() => handleViewProduct(product)}
+                className="group relative bg-gradient-to-br from-gray-800 to-gray-900 rounded-2xl shadow-2xl hover:shadow-red-500/20 transition-all duration-500 transform hover:-translate-y-2 overflow-hidden border border-gray-700 flex flex-col h-full min-h-[480px]"
               >
                 {/* Product Badge */}
                 <div className="absolute top-3 left-3 z-20">
@@ -551,7 +736,8 @@ function ProductPage() {
                 </div>
                 
                 {/* Product Image Area */}
-                <div className={`h-48 bg-gradient-to-br ${product.gradient} relative overflow-hidden group`}>
+                <div className={`h-48 bg-gradient-to-br ${product.gradient} relative overflow-hidden group cursor-pointer`}
+                     onClick={() => handleViewProduct(product)}>
                   <div className="absolute inset-0 opacity-[0.02] bg-[linear-gradient(45deg,_transparent_25%,_rgba(255,255,255,0.1)_50%,_transparent_75%)] bg-[size:20px_20px]"></div>
                   
                   <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent transform -skew-x-12 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000"></div>
@@ -569,19 +755,26 @@ function ProductPage() {
                     </span>
                   </div>
 
-                  {/* Quick View Overlay */}
+                  {/* Quick Preview Button */}
                   <div className="absolute inset-0 bg-black/0 group-hover:bg-black/50 transition-all duration-500 flex items-center justify-center">
                     <div className="opacity-0 group-hover:opacity-100 transform translate-y-4 group-hover:translate-y-0 transition-all duration-500">
-                      <span className="bg-white/20 backdrop-blur-md text-white px-3 py-1 rounded-full font-semibold text-xs border border-white/30">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          handleQuickPreview(product)
+                        }}
+                        className="bg-white/20 backdrop-blur-md text-white px-4 py-2 rounded-full font-semibold text-sm border border-white/30 hover:bg-white/30 transition-all duration-300 cursor-pointer"
+                      >
                         Quick Preview
-                      </span>
+                      </button>
                     </div>
                   </div>
                 </div>
 
                 {/* Product Content */}
                 <div className="flex-1 flex flex-col p-4">
-                  <h3 className="text-lg font-bold text-white mb-2 group-hover:text-amber-400 transition-colors duration-300 line-clamp-2">
+                  <h3 className="text-lg font-bold text-white mb-2 group-hover:text-amber-400 transition-colors duration-300 line-clamp-2 cursor-pointer"
+                      onClick={() => handleViewProduct(product)}>
                     {product.name}
                   </h3>
                   
@@ -632,29 +825,32 @@ function ProductPage() {
                       </div>
                       <span className="text-xs text-gray-500">{product.material}</span>
                     </div>
-                    
+                  </div>
+
+                  {/* Action Buttons */}
+                  <div className="flex gap-2 mt-3">
                     <button 
                       onClick={(e) => {
                         e.stopPropagation();
                         console.log('Added to cart:', product.id);
                       }}
-                      className="bg-gradient-to-r from-red-600 to-amber-600 hover:from-red-700 hover:to-amber-700 text-white px-3 py-1.5 rounded-lg font-semibold transition-all duration-300 transform hover:scale-105 cursor-pointer shadow-lg hover:shadow-xl group relative overflow-hidden text-xs"
+                      className="flex-1 bg-gradient-to-r from-red-600 to-amber-600 hover:from-red-700 hover:to-amber-700 text-white px-3 py-2 rounded-lg font-semibold transition-all duration-300 transform hover:scale-105 cursor-pointer shadow-lg hover:shadow-xl group relative overflow-hidden text-xs"
                       disabled={product.stock === 0}
                     >
                       <div className="absolute inset-0 opacity-0 group-hover:opacity-10 bg-[linear-gradient(45deg,_transparent_48%,_#fff_50%,_transparent_52%)] bg-[size:15px_15px] transition-opacity duration-300"></div>
-                      <span className="flex items-center relative">
+                      <span className="flex items-center justify-center relative">
                         {product.stock === 0 ? 'Out of Stock' : 'Add to Cart'}
-                        {product.stock > 0 && (
-                          <svg 
-                            className="w-3 h-3 ml-1 transform group-hover:translate-x-0.5 transition-transform duration-300" 
-                            fill="none" 
-                            stroke="currentColor" 
-                            viewBox="0 0 24 24"
-                          >
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                          </svg>
-                        )}
                       </span>
+                    </button>
+                    
+                    <button 
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleViewProduct(product);
+                      }}
+                      className="px-4 py-2 border border-amber-400 text-amber-400 hover:bg-amber-400 hover:text-white rounded-lg font-semibold transition-all duration-300 cursor-pointer text-xs"
+                    >
+                      Details
                     </button>
                   </div>
                 </div>
@@ -762,27 +958,6 @@ function ProductPage() {
           -webkit-line-clamp: 2;
           -webkit-box-orient: vertical;
           overflow: hidden;
-        }
-        
-        /* Custom cursor styles for better UX */
-        select {
-          cursor: pointer;
-        }
-        
-        button:not(:disabled) {
-          cursor: pointer;
-        }
-        
-        .cursor-text {
-          cursor: text;
-        }
-        
-        .cursor-default {
-          cursor: default;
-        }
-        
-        .cursor-not-allowed {
-          cursor: not-allowed;
         }
       `}</style>
     </div>

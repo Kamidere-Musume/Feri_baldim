@@ -1,11 +1,14 @@
 import { useState, useEffect } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 
 const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
+  const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [cartItems] = useState(3);
   const [isScrolled, setIsScrolled] = useState(false);
+  const [currentUser, setCurrentUser] = useState(null);
   const location = useLocation();
+  const navigate = useNavigate();
 
   useEffect(() => {
     const handleScroll = () => {
@@ -13,6 +16,14 @@ const Navbar = () => {
     };
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  // Check if user is logged in (in real app, this would be from context/API)
+  useEffect(() => {
+    const user = localStorage.getItem('currentUser');
+    if (user) {
+      setCurrentUser(JSON.parse(user));
+    }
   }, []);
 
   const navItems = [
@@ -28,6 +39,12 @@ const Navbar = () => {
     </svg>
   );
 
+  const UserIcon = () => (
+    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+    </svg>
+  );
+
   const isActiveLink = (path) => {
     if (path === '/') {
       return location.pathname === '/';
@@ -37,6 +54,23 @@ const Navbar = () => {
 
   const handleNavClick = () => {
     if (isOpen) setIsOpen(false);
+  };
+
+  const handleLogin = () => {
+    navigate('/login');
+    setUserMenuOpen(false);
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem('currentUser');
+    setCurrentUser(null);
+    setUserMenuOpen(false);
+    navigate('/');
+  };
+
+  const handleRegister = () => {
+    navigate('/register');
+    setUserMenuOpen(false);
   };
 
   return (
@@ -137,6 +171,124 @@ const Navbar = () => {
                 }`}></div>
               </Link>
             </div>
+
+            {/* User Account Section */}
+            <div className="relative pl-8 ml-8 border-l border-gray-600/50 ">
+              <button
+                onClick={() => setUserMenuOpen(!userMenuOpen)}
+                className={`flex items-center space-x-2 py-2 px-4 transition-all duration-300 rounded-lg group relative cursor-pointer ${
+                  isScrolled 
+                    ? 'text-gray-300 hover:text-white' 
+                    : 'text-white hover:text-white'
+                }`}
+              >
+                {/* User Icon */}
+                <UserIcon />
+                
+                {/* User Text */}
+                <span className="font-medium text-sm">
+                  {currentUser ? currentUser.name : 'Account'}
+                </span>
+                
+                {/* Dropdown Arrow */}
+                <svg 
+                  className={`w-4 h-4 transition-transform duration-200 ${userMenuOpen ? 'rotate-180' : ''}`}
+                  fill="none" 
+                  stroke="currentColor" 
+                  viewBox="0 0 24 24"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+                
+                {/* Line Animation */}
+                <div className={`absolute bottom-0 left-0 w-full h-0.5 bg-gradient-to-r from-orange-400 to-yellow-400 transform origin-left scale-x-0 transition-transform duration-300 ${
+                  userMenuOpen ? 'scale-x-100' : 'group-hover:scale-x-100'
+                }`}></div>
+              </button>
+
+              {/* User Dropdown Menu */}
+              {userMenuOpen && (
+                <div className={`absolute right-0 mt-2 w-48 rounded-xl shadow-2xl border backdrop-blur-xl ${
+                  isScrolled
+                    ? 'bg-gray-900/95 border-gray-700'
+                    : 'bg-orange-500/95 border-orange-300'
+                }`}>
+                  {currentUser ? (
+                    <>
+                      <div className="px-4 py-3 border-b border-gray-600/50">
+                        <p className={`text-sm font-medium ${
+                          isScrolled ? 'text-white' : 'text-white'
+                        }`}>
+                          {currentUser.name}
+                        </p>
+                        <p className={`text-xs ${
+                          isScrolled ? 'text-gray-300' : 'text-orange-100'
+                        }`}>
+                          {currentUser.email}
+                        </p>
+                      </div>
+                      <div className="p-2">
+                        <Link
+                          to="/profile"
+                          onClick={() => setUserMenuOpen(false)}
+                          className={`block px-3 py-2 rounded-lg text-sm transition-all duration-300 ${
+                            isScrolled
+                              ? 'text-gray-300 hover:text-white hover:bg-gray-800'
+                              : 'text-white hover:bg-orange-600'
+                          }`}
+                        >
+                          My Profile
+                        </Link>
+                        <Link
+                          to="/orders"
+                          onClick={() => setUserMenuOpen(false)}
+                          className={`block px-3 py-2 rounded-lg text-sm transition-all duration-300 ${
+                            isScrolled
+                              ? 'text-gray-300 hover:text-white hover:bg-gray-800'
+                              : 'text-white hover:bg-orange-600'
+                          }`}
+                        >
+                          My Orders
+                        </Link>
+                        <button
+                          onClick={handleLogout}
+                          className={`block w-full text-left px-3 py-2 rounded-lg text-sm transition-all duration-300 ${
+                            isScrolled
+                              ? 'text-red-400 hover:text-white hover:bg-red-600/20'
+                              : 'text-red-300 hover:text-white hover:bg-red-500'
+                          }`}
+                        >
+                          Sign Out
+                        </button>
+                      </div>
+                    </>
+                  ) : (
+                    <div className="p-2">
+                      <button
+                        onClick={handleLogin}
+                        className={`block w-full text-left px-3 py-2 rounded-lg text-sm transition-all duration-300 mb-2 cursor-pointer ${
+                          isScrolled
+                            ? 'text-gray-300 hover:text-white hover:bg-gray-800'
+                            : 'text-white hover:bg-orange-600'
+                        }`}
+                      >
+                        Sign In
+                      </button>
+                      <button
+                        onClick={handleRegister}
+                        className={`block w-full text-left px-3 py-2 rounded-lg text-sm transition-all duration-300 cursor-pointer ${
+                          isScrolled
+                            ? 'text-gray-300 hover:text-white hover:bg-gray-800'
+                            : 'text-white hover:bg-orange-600'
+                        }`}
+                      >
+                        Create Account
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Mobile Menu */}
@@ -164,6 +316,82 @@ const Navbar = () => {
                   </span>
                 )}
               </Link>
+            </div>
+
+            {/* User Icon for Mobile */}
+            <div className="relative">
+              <button
+                onClick={() => setUserMenuOpen(!userMenuOpen)}
+                className={`flex items-center space-x-2 py-2 px-3 transition-all duration-300 cursor-pointer ${
+                  isScrolled 
+                    ? 'text-gray-300 hover:text-white' 
+                    : 'text-white hover:text-white'
+                }`}
+              >
+                <UserIcon />
+                <span className="text-sm font-medium">
+                  {currentUser ? currentUser.name.split(' ')[0] : 'Account'}
+                </span>
+              </button>
+
+              {/* Mobile User Dropdown */}
+              {userMenuOpen && (
+                <div className={`absolute right-0 mt-2 w-48 rounded-xl shadow-2xl border backdrop-blur-xl z-50 ${
+                  isScrolled
+                    ? 'bg-gray-900/95 border-gray-700'
+                    : 'bg-orange-500/95 border-orange-300'
+                }`}>
+                  {currentUser ? (
+                    <>
+                      <div className="px-4 py-3 border-b border-gray-600/50">
+                        <p className="text-sm font-medium text-white">
+                          {currentUser.name}
+                        </p>
+                        <p className="text-xs text-orange-100">
+                          {currentUser.email}
+                        </p>
+                      </div>
+                      <div className="p-2">
+                        <Link
+                          to="/profile"
+                          onClick={() => setUserMenuOpen(false)}
+                          className="block px-3 py-2 rounded-lg text-sm text-white hover:bg-orange-600 transition-all duration-300"
+                        >
+                          My Profile
+                        </Link>
+                        <Link
+                          to="/orders"
+                          onClick={() => setUserMenuOpen(false)}
+                          className="block px-3 py-2 rounded-lg text-sm text-white hover:bg-orange-600 transition-all duration-300"
+                        >
+                          My Orders
+                        </Link>
+                        <button
+                          onClick={handleLogout}
+                          className="block w-full text-left px-3 py-2 rounded-lg text-sm text-red-300 hover:text-white hover:bg-red-500 transition-all duration-300"
+                        >
+                          Sign Out
+                        </button>
+                      </div>
+                    </>
+                  ) : (
+                    <div className="p-2">
+                      <button
+                        onClick={handleLogin}
+                        className="block w-full text-left px-3 py-2 rounded-lg text-sm text-white hover:bg-orange-600 transition-all duration-300 mb-2"
+                      >
+                        Sign In
+                      </button>
+                      <button
+                        onClick={handleRegister}
+                        className="block w-full text-left px-3 py-2 rounded-lg text-sm text-white hover:bg-orange-600 transition-all duration-300"
+                      >
+                        Create Account
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
 
             {/* Hamburger Menu */}
@@ -250,6 +478,58 @@ const Navbar = () => {
                   </span>
                 )}
               </Link>
+
+              {/* Mobile Auth Links */}
+              {currentUser ? (
+                <>
+                  <div className="border-t border-gray-600/50 pt-3 mt-3">
+                    <div className="px-4 py-2">
+                      <p className="text-white font-medium text-sm">{currentUser.name}</p>
+                      <p className="text-orange-100 text-xs">{currentUser.email}</p>
+                    </div>
+                    <Link
+                      to="/profile"
+                      onClick={handleNavClick}
+                      className="flex items-center justify-between px-4 py-4 rounded-xl text-base font-medium text-white/95 hover:text-white transition-all duration-300 group"
+                    >
+                      <span>My Profile</span>
+                      <svg className="w-4 h-4 transform group-hover:translate-x-1 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                      </svg>
+                    </Link>
+                    <button
+                      onClick={handleLogout}
+                      className="flex items-center justify-between w-full px-4 py-4 rounded-xl text-base font-medium text-red-300 hover:text-white transition-all duration-300 group"
+                    >
+                      <span>Sign Out</span>
+                      <svg className="w-4 h-4 transform group-hover:translate-x-1 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                      </svg>
+                    </button>
+                  </div>
+                </>
+              ) : (
+                <div className="border-t border-gray-600/50 pt-3 mt-3">
+                  <button
+                    onClick={handleLogin}
+                    className="flex items-center justify-between w-full px-4 py-4 rounded-xl text-base font-medium text-white/95 hover:text-white transition-all duration-300 group"
+                  >
+                    <span>Sign In</span>
+                    <svg className="w-4 h-4 transform group-hover:translate-x-1 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                    </svg>
+                  </button>
+                  <button
+                    onClick={handleRegister}
+                    className="flex items-center justify-between w-full px-4 py-4 rounded-xl text-base font-medium text-white/95 hover:text-white transition-all duration-300 group"
+                  >
+                    <span>Create Account</span>
+                    <svg className="w-4 h-4 transform group-hover:translate-x-1 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                    </svg>
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         )}
