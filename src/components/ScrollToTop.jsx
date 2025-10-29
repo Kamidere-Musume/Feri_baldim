@@ -13,7 +13,7 @@ function ScrollToTop() {
     });
   }, [pathname, search, hash]); // Listen to all location changes
 
-  return null;
+  return null;  
 }
 
 export default ScrollToTop;

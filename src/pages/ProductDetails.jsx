@@ -23,6 +23,44 @@ function ProductDetails() {
     window.scrollTo(0, 0);
   }, []);
 
+  // Add to cart function
+  const addToCart = (product, quantity = 1) => {
+    // Get current user (in real app, this would come from auth context)
+    const currentUser = JSON.parse(localStorage.getItem('currentUser')) || {
+      id: 1,
+      name: 'John Doe',
+      email: 'john@example.com'
+    };
+
+    // Get existing cart or initialize empty array
+    const userCart = JSON.parse(localStorage.getItem(`cart_${currentUser.id}`)) || [];
+    
+    // Check if product already exists in cart
+    const existingItem = userCart.find(item => item.id === product.id);
+    
+    if (existingItem) {
+      // Update quantity if item exists
+      const updatedCart = userCart.map(item =>
+        item.id === product.id 
+          ? { ...item, quantity: item.quantity + quantity }
+          : item
+      );
+      localStorage.setItem(`cart_${currentUser.id}`, JSON.stringify(updatedCart));
+    } else {
+      // Add new item to cart
+      const newItem = {
+        ...product,
+        quantity: quantity,
+        addedAt: new Date().toISOString()
+      };
+      const updatedCart = [...userCart, newItem];
+      localStorage.setItem(`cart_${currentUser.id}`, JSON.stringify(updatedCart));
+    }
+
+    // Show success message
+    alert(`${quantity} ${product.name}(s) added to cart!`);
+  };
+
   // Sample product images for slideshow
   const productImages = [
     'https://images.unsplash.com/photo-1581093458791-8a6b6d47d0b9?w=500&h=500&fit=crop',
@@ -393,6 +431,7 @@ function ProductDetails() {
 
                 <div className="flex gap-4">
                   <button 
+                    onClick={() => addToCart(product, quantity)}
                     className="flex-1 bg-gradient-to-r from-red-600 to-amber-600 hover:from-red-700 hover:to-amber-700 text-white py-4 rounded-xl font-semibold transition-all duration-300 transform hover:scale-105 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                     disabled={product.stock === 0}
                   >
